@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Download, Gem, Calendar, Palette, Upload, Image as ImageIcon, X, Layout, Save, Loader2, RefreshCw } from 'lucide-react';
+import { Download, Gem, Calendar, Palette, Upload, Image as ImageIcon, X, Layout, Save, Loader2, RefreshCw, Share2, Check } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTU3_CIpMZcKYy8HNwz7roxLlUM4ndzxn8AJvtD38IA-VsNykmY9wzU-fkEotDNyy1F955_toROJAy-/pub?output=csv';
@@ -10,17 +10,17 @@ const AwardGenerator = () => {
   const [savedBg, setSavedBg] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [previewScale, setPreviewScale] = useState(1);
 
   const awardRef = useRef<HTMLDivElement>(null);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
 
-  // 處理 Mobile 縮放邏輯
   useEffect(() => {
     const handleResize = () => {
       if (previewWrapperRef.current) {
         const containerWidth = previewWrapperRef.current.offsetWidth;
-        const targetWidth = 480; // 賀報原始寬度
+        const targetWidth = 480; 
         if (containerWidth < targetWidth + 40) {
           const scale = (containerWidth - 40) / targetWidth;
           setPreviewScale(scale);
@@ -31,7 +31,7 @@ const AwardGenerator = () => {
     };
 
     window.addEventListener('resize', handleResize);
-    handleResize(); // 初始化執行
+    handleResize(); 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -59,6 +59,16 @@ const AwardGenerator = () => {
       setData(prev => ({ ...prev, bgImage: savedBg }));
     }
   }, [savedBg]);
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('複製失敗', err);
+    }
+  };
 
   const compressImage = (file: File, callback: (dataUrl: string) => void) => {
     const reader = new FileReader();
@@ -147,8 +157,6 @@ const AwardGenerator = () => {
           if (fileId) {
             const directUrl = `https://lh3.googleusercontent.com/u/0/d/${fileId}=w1000`;
             setData(prev => ({ ...prev, image: directUrl }));
-          } else {
-            alert('無法解析該雲端硬碟連結，請確認格式正確。');
           }
         } else {
           alert(`在雲端試算表中找到了「${data.name}」，但沒看到照片連結。`);
@@ -179,7 +187,7 @@ const AwardGenerator = () => {
       const node = awardRef.current;
       const dataUrl = await toPng(node, {
         cacheBust: true,
-        pixelRatio: 2,
+        pixelRatio: 3, 
         backgroundColor: '#000',
         width: 480,
         height: 600,
@@ -190,7 +198,7 @@ const AwardGenerator = () => {
       });
       
       const link = document.createElement('a');
-      link.download = `中恩賀報_${data.name}.png`;
+      link.download = `B1690賀報_${data.name}_${new Date().getMonth()+1}${new Date().getDate()}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -213,19 +221,26 @@ const AwardGenerator = () => {
     <div className="min-h-screen p-4 md:p-8 font-sans text-slate-200 bg-slate-900">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
         
-        {/* 左側：控制面板 */}
         <div className="md:col-span-4 space-y-6 order-2 md:order-1">
           <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-xl shadow-2xl p-6">
-            <div className="border-b border-slate-700 pb-4 mb-6">
-              <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                <Palette className="w-6 h-6 text-red-500" />
-                中恩賀報產生器
-              </h1>
-              <p className="text-slate-400 text-[10px] mt-1 tracking-widest uppercase">B1690 Premium Edition</p>
+            <div className="border-b border-slate-700 pb-4 mb-6 flex justify-between items-start">
+              <div>
+                <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Palette className="w-6 h-6 text-red-500" />
+                  中恩賀報產生器
+                </h1>
+                <p className="text-slate-400 text-[10px] mt-1 tracking-widest uppercase">B1690 Premium Edition</p>
+              </div>
+              <button 
+                onClick={copyLink}
+                className={`p-2 rounded-lg transition-all flex items-center gap-2 ${copied ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'}`}
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                <span className="text-[10px] font-bold">{copied ? '已複製' : '分享網址'}</span>
+              </button>
             </div>
 
             <div className="space-y-5">
-              {/* 基本資訊輸入 */}
               <div className="space-y-4">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">姓名</label>
@@ -261,49 +276,43 @@ const AwardGenerator = () => {
                 </div>
               </div>
 
-              {/* 底圖設定 */}
               <div className="bg-slate-700/30 p-3 rounded-lg border border-slate-600">
                 <label className="block text-[10px] font-bold uppercase text-slate-300 mb-2 tracking-wider flex items-center gap-2">
                   <Layout className="w-3 h-3" /> 自訂底圖
                 </label>
                 {!data.bgImage ? (
-                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-slate-500 border-dashed rounded-lg cursor-pointer bg-slate-800 hover:bg-slate-700 transition-all group">
-                    <Upload className="w-6 h-6 mb-2 text-slate-400 group-hover:text-white animate-bounce" />
-                    <p className="text-xs text-slate-300 font-bold">上傳背景圖</p>
+                  <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-slate-500 border-dashed rounded-lg cursor-pointer bg-slate-800 hover:bg-slate-700 transition-all group">
+                    <p className="text-xs text-slate-300 font-bold">上傳背景</p>
                     <input type="file" className="hidden" accept="image/*" onChange={handleBgUpload} />
                   </label>
                 ) : (
-                  <div className="relative w-full h-24 rounded-lg overflow-hidden border border-white/30">
+                  <div className="relative w-full h-20 rounded-lg overflow-hidden border border-white/30">
                     <img src={data.bgImage} alt="Bg" className="w-full h-full object-cover" />
-                    <button onClick={removeBgImage} className="absolute top-1 right-1 bg-red-600 p-1 rounded-full shadow-lg">
+                    <button onClick={removeBgImage} className="absolute top-1 right-1 bg-red-600 p-1 rounded-full">
                       <X className="w-3 h-3 text-white" />
                     </button>
                   </div>
                 )}
               </div>
 
-              {/* 人物照片上傳 */}
               <div>
                 <label className="block text-[10px] font-bold uppercase text-slate-300 mb-2 tracking-wider flex items-center gap-2">
-                  <ImageIcon className="w-3 h-3" /> 上傳人物照片 (手動)
+                  <ImageIcon className="w-3 h-3" /> 人像上傳
                 </label>
-                <div className="grid grid-cols-1 gap-2">
-                  {!data.image ? (
-                    <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-700 transition-all">
-                      <p className="text-xs text-slate-400">點此上傳照片</p>
-                      <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                    </label>
-                  ) : (
-                    <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/30 group">
-                      <img src={data.image} crossOrigin="anonymous" alt="Avatar" className="w-full h-full object-cover" />
-                      <button onClick={removeImage} className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <X className="w-5 h-5 text-white" />
-                      </button>
-                    </div>
-                  )}
-                </div>
+                {!data.image ? (
+                  <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-700 transition-all">
+                    <p className="text-xs text-slate-400">點此上傳</p>
+                    <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                  </label>
+                ) : (
+                  <div className="relative w-full h-24 rounded-lg overflow-hidden border border-white/30 group">
+                    <img src={data.image} crossOrigin="anonymous" alt="Avatar" className="w-full h-full object-cover" />
+                    <button onClick={removeImage} className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                      <X className="w-5 h-5 text-white" />
+                    </button>
+                  </div>
+                )}
               </div>
-
             </div>
             
             <div className="mt-8 pt-6 border-t border-slate-700">
@@ -319,7 +328,6 @@ const AwardGenerator = () => {
           </div>
         </div>
 
-        {/* 右側：預覽顯示區 */}
         <div ref={previewWrapperRef} className="md:col-span-8 flex flex-col items-center justify-start min-h-[650px] order-1 md:order-2">
           
           <div 
@@ -332,20 +340,12 @@ const AwardGenerator = () => {
             }}
             className="relative overflow-hidden shadow-2xl rounded-sm bg-black text-white shrink-0"
           >
-            {/* 實體賀報內容 */}
             <div ref={awardRef} className="w-full h-full relative">
-                {/* 1. 背景層 - 使用預設底圖連結 */}
                 <div className="absolute inset-0 z-0">
-                  <img 
-                    src={data.bgImage || DEFAULT_BG_URL} 
-                    className="w-full h-full object-cover" 
-                    alt="bg" 
-                    crossOrigin="anonymous"
-                  />
+                  <img src={data.bgImage || DEFAULT_BG_URL} className="w-full h-full object-cover" alt="bg" crossOrigin="anonymous" />
                   <div className="absolute inset-0 bg-black/20"></div>
                 </div>
 
-                {/* 2. 裝飾邊框 */}
                 <div className="absolute inset-4 z-10 pointer-events-none border border-white/20">
                   <div className="absolute top-0 left-0 w-12 h-12 border-t-2 border-l-2 border-white/60"></div>
                   <div className="absolute top-0 right-0 w-12 h-12 border-t-2 border-r-2 border-white/60"></div>
@@ -353,47 +353,46 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-white/60"></div>
                 </div>
 
-                {/* 3. 內容層 */}
-                <div className="absolute inset-0 z-20 flex flex-col items-center pt-20 pb-6 px-6 text-center">
+                {/* 內容層：調整 pt-10 增加頂部空間 */}
+                <div className="absolute inset-0 z-20 flex flex-col items-center pt-10 pb-6 px-6 text-center">
                   
-                  {/* 頭像區域 */}
-                  <div className="relative w-60 h-60 mb-8 rounded-full border-4 border-white shadow-xl overflow-hidden bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                  {/* 頭像區域：放大至 w-64 (256px)，移除邊框並調整 mb-4 */}
+                  <div className="relative w-64 h-64 mb-4 rounded-full shadow-2xl overflow-hidden bg-black/40 backdrop-blur-sm flex items-center justify-center shrink-0">
                     {data.image ? (
                       <img src={data.image} crossOrigin="anonymous" className="w-full h-full object-cover" alt="avatar" />
                     ) : (
-                      <span className="text-9xl font-black font-serif-tc text-white drop-shadow-md">賀</span>
+                      <span className="text-[12rem] font-black font-serif-tc text-white drop-shadow-md">賀</span>
                     )}
                   </div>
 
-                  {/* 姓名 */}
-                  <h2 className="text-5xl font-black text-white tracking-widest drop-shadow-xl font-serif-tc mb-6">
+                  {/* 姓名：稍微下移 */}
+                  <h2 className="text-5xl font-black text-white tracking-widest drop-shadow-xl font-serif-tc mb-5 shrink-0">
                     {data.name}
                   </h2>
 
-                  {/* 數據看板 */}
-                  <div className="w-full max-w-[340px] border-2 border-white rounded-2xl overflow-hidden backdrop-blur-md bg-black/20 shadow-2xl">
-                    <div className="py-2.5 bg-white/10 border-b border-white/20">
+                  {/* 數據看板：強制 shrink-0 */}
+                  <div className="w-full max-w-[340px] border-2 border-white rounded-2xl overflow-hidden backdrop-blur-md bg-black/20 shadow-2xl shrink-0">
+                    <div className="py-2.5 bg-white/10 border-b border-white/20 shrink-0">
                       <p className="text-xl font-bold tracking-widest text-white drop-shadow-md">成交 {data.product}</p>
                     </div>
-                    <div className="flex relative">
+                    <div className="flex relative shrink-0">
                       <div className="absolute inset-y-3 left-1/2 w-[1px] bg-white/30"></div>
-                      <div className="flex-1 py-4">
+                      <div className="flex-1 py-4 shrink-0">
                         <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">FYP</p>
-                        <p className={`${getFontSize(data.fyp)} font-black text-white font-mono leading-none drop-shadow-lg`}>{data.fyp}</p>
+                        <p className={`${getFontSize(data.fyp)} font-black text-white font-mono leading-tight drop-shadow-lg shrink-0`}>{data.fyp}</p>
                       </div>
-                      <div className="flex-1 py-4">
+                      <div className="flex-1 py-4 shrink-0">
                         <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
                           <Gem className="w-2.5 h-2.5" /> FYC
                         </p>
-                        <p className={`${getFontSize(data.fyc)} font-black text-white font-mono leading-none drop-shadow-lg`}>{data.fyc}</p>
+                        <p className={`${getFontSize(data.fyc)} font-black text-white font-mono leading-tight drop-shadow-lg shrink-0`}>{data.fyc}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex-1"></div>
+                  <div className="flex-1 min-h-[5px]"></div>
                   
-                  {/* 頁尾資訊 */}
-                  <div className="flex flex-col items-center gap-1.5 opacity-90">
+                  <div className="flex flex-col items-center gap-1 opacity-90 shrink-0">
                     <div className="flex items-center gap-3">
                       <span className="text-[11px] font-black tracking-[0.2em] text-white">B1690</span>
                       <span className="text-white/40">|</span>
