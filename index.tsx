@@ -345,8 +345,8 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-white/60"></div>
                 </div>
 
-                {/* 內容疊層：pt-8 相較於 pt-20 大幅往上移動 */}
-                <div className="absolute inset-0 z-20 flex flex-col items-center pt-8 pb-6 px-6 text-center">
+                {/* 內容疊層：pt-4 使其最上方，優化對齊問題 */}
+                <div className="absolute inset-0 z-20 flex flex-col items-center pt-4 pb-6 px-6 text-center">
                   
                   {/* 頭像區域 */}
                   <div className="relative w-64 h-64 mb-6 rounded-full shadow-2xl overflow-hidden bg-black/40 backdrop-blur-sm flex items-center justify-center shrink-0">
