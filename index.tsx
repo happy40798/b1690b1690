@@ -63,7 +63,7 @@ const AwardGenerator = () => {
     }
   }, [savedBg]);
 
-  // 圖片壓縮處理
+  // 圖片壓縮處理 (主要用於使用者上傳的背景)
   const compressImage = (file: File, callback: (dataUrl: string) => void) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -151,6 +151,7 @@ const AwardGenerator = () => {
           }
 
           if (fileId) {
+            // 使用 lh3 網域並加上 crossorigin 屬性來解決 CORS 問題
             const directUrl = `https://lh3.googleusercontent.com/u/0/d/${fileId}=w1000`;
             setData(prev => ({ ...prev, image: directUrl }));
           }
@@ -181,10 +182,13 @@ const AwardGenerator = () => {
     setIsDownloading(true);
     
     try {
+      // 確保圖片完全載入
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const node = awardRef.current;
       const dataUrl = await toPng(node, {
         cacheBust: true,
-        pixelRatio: 3, 
+        pixelRatio: 2, // 降低至 2 倍以避免手機記憶體溢出
         backgroundColor: '#000',
         width: 480,
         height: 600,
@@ -200,7 +204,7 @@ const AwardGenerator = () => {
       link.click();
     } catch (err) {
       console.error('下載失敗', err);
-      alert("下載失敗，建議直接截圖保存預覽畫面！");
+      alert("下載失敗。請確保網路通暢，若仍失敗，請直接對預覽圖長按儲存！");
     } finally {
       setIsDownloading(false);
     }
@@ -313,6 +317,9 @@ const AwardGenerator = () => {
                  {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                  {isDownloading ? '賀報生成中...' : '下載高清賀報'}
                </button>
+               <p className="text-center text-slate-500 text-[10px] mt-3 tracking-widest">
+                 手機下載若黑畫面請長按圖片儲存
+               </p>
             </div>
           </div>
         </div>
@@ -331,9 +338,9 @@ const AwardGenerator = () => {
             className="relative overflow-hidden shadow-2xl rounded-sm bg-black text-white shrink-0"
           >
             <div ref={awardRef} className="w-full h-full relative">
-                {/* 背景底圖 */}
+                {/* 背景底圖 - 加上 crossOrigin 防止畫布汙染 */}
                 <div className="absolute inset-0 z-0">
-                  <img src={data.bgImage || DEFAULT_BG_URL} className="w-full h-full object-cover" alt="bg" crossOrigin="anonymous" />
+                  <img src={data.bgImage || DEFAULT_BG_URL} crossOrigin="anonymous" className="w-full h-full object-cover" alt="bg" />
                   <div className="absolute inset-0 bg-black/20"></div>
                 </div>
 
@@ -345,7 +352,7 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-white/60"></div>
                 </div>
 
-                {/* 內容疊層：pt-4 使其最上方，優化對齊問題 */}
+                {/* 內容疊層：pt-4 使其最上方，優化視覺平衡 */}
                 <div className="absolute inset-0 z-20 flex flex-col items-center pt-4 pb-6 px-6 text-center">
                   
                   {/* 頭像區域 */}
