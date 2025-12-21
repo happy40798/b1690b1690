@@ -63,7 +63,7 @@ const AwardGenerator = () => {
     }
   }, [savedBg]);
 
-  // 圖片壓縮處理 (主要用於使用者上傳的背景)
+  // 圖片壓縮處理
   const compressImage = (file: File, callback: (dataUrl: string) => void) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -151,7 +151,6 @@ const AwardGenerator = () => {
           }
 
           if (fileId) {
-            // 使用 lh3 網域並加上 crossorigin 屬性來解決 CORS 問題
             const directUrl = `https://lh3.googleusercontent.com/u/0/d/${fileId}=w1000`;
             setData(prev => ({ ...prev, image: directUrl }));
           }
@@ -176,20 +175,48 @@ const AwardGenerator = () => {
     setSavedBg(null);
   };
 
+  // 輔助函式：將 URL 轉為 Base64 (解決行動裝置 CORS 黑屏)
+  const imageUrlToBase64 = async (url: string): Promise<string> => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      console.error("Base64 轉換失敗", e);
+      return url; // 失敗則回傳原 URL
+    }
+  };
+
   // 下載賀報
   const downloadImage = async () => {
     if (!awardRef.current || isDownloading) return;
     setIsDownloading(true);
     
     try {
-      // 確保圖片完全載入
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // 在下載前確保所有網路圖片都已載入完成
+      const images = awardRef.current.querySelectorAll('img');
+      const promises = Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      });
+      await Promise.all(promises);
+      
+      // 給予額外的渲染等待時間
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       const node = awardRef.current;
       const dataUrl = await toPng(node, {
         cacheBust: true,
-        pixelRatio: 2, // 降低至 2 倍以避免手機記憶體溢出
-        backgroundColor: '#000',
+        pixelRatio: 2, // 2倍解析度對於手機最為穩定
+        backgroundColor: '#000000',
         width: 480,
         height: 600,
         style: {
@@ -204,7 +231,7 @@ const AwardGenerator = () => {
       link.click();
     } catch (err) {
       console.error('下載失敗', err);
-      alert("下載失敗。請確保網路通暢，若仍失敗，請直接對預覽圖長按儲存！");
+      alert("下載過程中發生錯誤。若下載後圖片仍是黑的，請直接對下方的預覽圖「長按並儲存」即可！");
     } finally {
       setIsDownloading(false);
     }
@@ -317,8 +344,9 @@ const AwardGenerator = () => {
                  {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                  {isDownloading ? '賀報生成中...' : '下載高清賀報'}
                </button>
-               <p className="text-center text-slate-500 text-[10px] mt-3 tracking-widest">
-                 手機下載若黑畫面請長按圖片儲存
+               <p className="text-center text-slate-500 text-[10px] mt-4 tracking-widest leading-relaxed">
+                 若按鈕下載失效或黑屏<br/>
+                 請長按右側預覽圖即可儲存圖片
                </p>
             </div>
           </div>
@@ -338,8 +366,8 @@ const AwardGenerator = () => {
             className="relative overflow-hidden shadow-2xl rounded-sm bg-black text-white shrink-0"
           >
             <div ref={awardRef} className="w-full h-full relative">
-                {/* 背景底圖 - 加上 crossOrigin 防止畫布汙染 */}
-                <div className="absolute inset-0 z-0">
+                {/* 背景層 - 加入備用漸層防黑 */}
+                <div className="absolute inset-0 z-0 bg-gradient-to-b from-[#1a1a1a] to-black">
                   <img src={data.bgImage || DEFAULT_BG_URL} crossOrigin="anonymous" className="w-full h-full object-cover" alt="bg" />
                   <div className="absolute inset-0 bg-black/20"></div>
                 </div>
@@ -352,11 +380,11 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-white/60"></div>
                 </div>
 
-                {/* 內容疊層：pt-4 使其最上方，優化視覺平衡 */}
-                <div className="absolute inset-0 z-20 flex flex-col items-center pt-4 pb-6 px-6 text-center">
+                {/* 內容疊層：pt-10 調整為黃金比例位置 */}
+                <div className="absolute inset-0 z-20 flex flex-col items-center pt-10 pb-6 px-6 text-center">
                   
                   {/* 頭像區域 */}
-                  <div className="relative w-64 h-64 mb-6 rounded-full shadow-2xl overflow-hidden bg-black/40 backdrop-blur-sm flex items-center justify-center shrink-0">
+                  <div className="relative w-64 h-64 mb-6 rounded-full shadow-[0_15px_35px_rgba(0,0,0,0.6)] overflow-hidden bg-black/40 backdrop-blur-sm flex items-center justify-center shrink-0 border border-white/10">
                     {data.image ? (
                       <img src={data.image} crossOrigin="anonymous" className="w-full h-full object-cover" alt="avatar" />
                     ) : (
@@ -365,12 +393,12 @@ const AwardGenerator = () => {
                   </div>
 
                   {/* 姓名 */}
-                  <h2 className="text-5xl font-black text-white tracking-widest drop-shadow-xl font-serif-tc mb-6 shrink-0 leading-tight">
+                  <h2 className="text-5xl font-black text-white tracking-widest drop-shadow-[0_5px_15px_rgba(0,0,0,0.8)] font-serif-tc mb-6 shrink-0 leading-tight">
                     {data.name}
                   </h2>
 
                   {/* 數據看板 */}
-                  <div className="w-full max-w-[340px] border-2 border-white rounded-2xl overflow-hidden backdrop-blur-md bg-black/20 shadow-2xl shrink-0">
+                  <div className="w-full max-w-[340px] border-2 border-white rounded-2xl overflow-hidden backdrop-blur-md bg-black/30 shadow-2xl shrink-0">
                     <div className="py-2.5 bg-white/10 border-b border-white/20 shrink-0">
                       <p className="text-xl font-bold tracking-widest text-white drop-shadow-md">成交 {data.product}</p>
                     </div>
