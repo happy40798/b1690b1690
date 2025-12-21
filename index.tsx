@@ -72,7 +72,6 @@ const AwardGenerator = () => {
   const awardRef = useRef<HTMLDivElement>(null);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
   
-  // Live API refs
   const audioContextRef = useRef<AudioContext | null>(null);
   const outAudioContextRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef(0);
@@ -505,11 +504,11 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-white/60"></div>
                 </div>
 
-                {/* 內容層：pt-20 全體下移 */}
-                <div className="absolute inset-0 z-20 flex flex-col items-center pt-20 pb-6 px-6 text-center">
+                {/* 內容層：pt-28 將全體進一步下移，保持畫面平衡 */}
+                <div className="absolute inset-0 z-20 flex flex-col items-center pt-28 pb-6 px-6 text-center">
                   
-                  {/* 頭像區域 */}
-                  <div className="relative w-64 h-64 mb-4 rounded-full shadow-2xl overflow-hidden bg-black/40 backdrop-blur-sm flex items-center justify-center shrink-0">
+                  {/* 頭像區域：mb-6 增加下移感 */}
+                  <div className="relative w-64 h-64 mb-6 rounded-full shadow-2xl overflow-hidden bg-black/40 backdrop-blur-sm flex items-center justify-center shrink-0">
                     {data.image ? (
                       <img src={data.image} crossOrigin="anonymous" className="w-full h-full object-cover" alt="avatar" />
                     ) : (
@@ -518,7 +517,7 @@ const AwardGenerator = () => {
                   </div>
 
                   {/* 姓名 */}
-                  <h2 className="text-5xl font-black text-white tracking-widest drop-shadow-xl font-serif-tc mb-5 shrink-0">
+                  <h2 className="text-5xl font-black text-white tracking-widest drop-shadow-xl font-serif-tc mb-6 shrink-0">
                     {data.name}
                   </h2>
 
