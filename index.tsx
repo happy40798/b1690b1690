@@ -27,7 +27,7 @@ const AwardGenerator = () => {
     bgImage: null as string | null, 
   });
 
-  // 輔助：網路 URL 轉 Base64（修復黑屏關鍵）
+  // 輔助：網路 URL 轉 Base64
   const getBase64 = async (url: string): Promise<string> => {
     if (!url || url.startsWith('data:')) return url;
     try {
@@ -39,12 +39,10 @@ const AwardGenerator = () => {
         reader.readAsDataURL(blob);
       });
     } catch (e) {
-      console.error("CORS conversion failed", e);
       return url;
     }
   };
 
-  // 當圖片 URL 變更時，自動轉為 Base64 避免 Canvas 汙染
   useEffect(() => {
     const convertImages = async () => {
       if (data.image && data.image.startsWith('http')) {
@@ -59,7 +57,6 @@ const AwardGenerator = () => {
     convertImages();
   }, [data.image, data.bgImage]);
 
-  // 響應式縮放
   useEffect(() => {
     const handleResize = () => {
       if (previewWrapperRef.current) {
@@ -73,13 +70,11 @@ const AwardGenerator = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // 讀取本地快取
   useEffect(() => {
     const bg = localStorage.getItem('b1690_custom_bg');
     if (bg) setData(prev => ({ ...prev, bgImage: bg }));
   }, []);
 
-  // 當任何數據變動，清空長按圖層
   useEffect(() => {
     setLongPressImage(null);
   }, [data.name, data.product, data.fyp, data.fyc, data.date, data.image, data.bgImage]);
@@ -125,7 +120,6 @@ const AwardGenerator = () => {
     if (!awardRef.current || isDownloading) return;
     setIsDownloading(true);
     try {
-      // 確保所有 Base64 圖片已就緒
       await new Promise(r => setTimeout(r, 600));
       const dataUrl = await toPng(awardRef.current, {
         pixelRatio: 2,
@@ -134,13 +128,13 @@ const AwardGenerator = () => {
         height: 600,
         style: { transform: 'scale(1)', transformOrigin: 'top left' }
       });
-      setLongPressImage(dataUrl); // 生成後存入狀態，供長按使用
+      setLongPressImage(dataUrl); 
       const link = document.createElement('a');
       link.download = `賀報_${data.name}.png`;
       link.href = dataUrl;
       link.click();
     } catch (e) {
-      alert("下載失敗，請嘗試長按圖片儲存！");
+      console.error(e);
     } finally {
       setIsDownloading(false);
     }
@@ -212,9 +206,6 @@ const AwardGenerator = () => {
                  {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                  {isDownloading ? '生成中...' : '下載高清賀報'}
                </button>
-               <p className="text-center text-slate-500 text-[10px] mt-4 tracking-tighter leading-relaxed">
-                 iPhone 若無法下載：點擊按鈕生成後<br/>「長按」右側預覽圖即可儲存
-               </p>
             </div>
           </div>
         </div>
@@ -225,7 +216,7 @@ const AwardGenerator = () => {
             style={{ transform: `scale(${previewScale})`, transformOrigin: 'top center', width: '480px', height: '600px', marginBottom: `${(600 * previewScale) - 600}px` }}
             className="relative overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.5)] bg-black text-white shrink-0"
           >
-            {/* 透明長按層：如果已經生成過 dataUrl，就覆蓋上去讓 iPhone 長按 */}
+            {/* 透明長按層 */}
             {longPressImage && (
               <img src={longPressImage} className="absolute inset-0 z-[100] w-full h-full object-contain pointer-events-auto opacity-0" alt="save-me" />
             )}
@@ -234,7 +225,7 @@ const AwardGenerator = () => {
                 {/* 背景底圖 */}
                 <div className="absolute inset-0 z-0 bg-neutral-900">
                   <img src={data.bgImage || DEFAULT_BG_URL} crossOrigin="anonymous" className="w-full h-full object-cover" alt="bg" />
-                  <div className="absolute inset-0 bg-black/25"></div>
+                  <div className="absolute inset-0 bg-black/20"></div>
                 </div>
 
                 {/* 裝飾框 */}
@@ -248,13 +239,18 @@ const AwardGenerator = () => {
                 {/* 內容區：pt-6 將內容往上抬一點 */}
                 <div className="absolute inset-0 z-20 flex flex-col items-center pt-6 pb-12 px-8 text-center">
                   
-                  {/* 頭像：縮小一點至 w-52 讓佈局更寬裕 */}
-                  <div className="relative w-52 h-52 mb-4 rounded-full shadow-[0_20px_40px_rgba(0,0,0,0.7)] overflow-hidden bg-black/40 backdrop-blur-sm flex items-center justify-center shrink-0 border border-white/10">
-                    {data.image ? (
-                      <img src={data.image} crossOrigin="anonymous" className="w-full h-full object-cover" alt="avatar" />
-                    ) : (
-                      <span className="text-[10rem] font-black font-serif-tc text-white/90">賀</span>
-                    )}
+                  {/* 頭像區域：重構以修復 Safari 陰影黑邊問題 */}
+                  <div className="relative w-52 h-52 mb-4 shrink-0 flex items-center justify-center">
+                    {/* 分離陰影層 */}
+                    <div className="absolute inset-0 rounded-full shadow-[0_15px_40px_rgba(0,0,0,0.8)] bg-black"></div>
+                    {/* 內容與邊框層 */}
+                    <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-white/30 bg-neutral-800 flex items-center justify-center">
+                      {data.image ? (
+                        <img src={data.image} crossOrigin="anonymous" className="w-full h-full object-cover" alt="avatar" />
+                      ) : (
+                        <span className="text-[10rem] font-black font-serif-tc text-white/90">賀</span>
+                      )}
+                    </div>
                   </div>
 
                   {/* 姓名 */}
@@ -263,7 +259,7 @@ const AwardGenerator = () => {
                   </h2>
 
                   {/* 數據看板 */}
-                  <div className="w-full max-w-[320px] border-2 border-white rounded-2xl overflow-hidden backdrop-blur-md bg-black/30 shadow-2xl shrink-0">
+                  <div className="w-full max-w-[320px] border-2 border-white rounded-2xl overflow-hidden bg-black/40 shadow-2xl shrink-0">
                     <div className="py-2 bg-white/10 border-b border-white/20">
                       <p className="text-lg font-bold tracking-widest text-white drop-shadow-md">成交 {data.product}</p>
                     </div>
@@ -282,7 +278,7 @@ const AwardGenerator = () => {
                     </div>
                   </div>
 
-                  {/* 頁尾：mt-auto 結合 pb-12 確保在底部但有足夠空間 */}
+                  {/* 頁尾：確保足夠安全間距防止裁切 */}
                   <div className="mt-auto flex flex-col items-center gap-1.5 opacity-90 shrink-0">
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-black tracking-[0.2em] text-white">B1690</span>
@@ -297,11 +293,6 @@ const AwardGenerator = () => {
                 </div>
             </div>
           </div>
-          {longPressImage && (
-            <div className="mt-4 flex items-center gap-2 text-red-400 bg-red-400/10 px-4 py-2 rounded-full border border-red-400/20">
-              <span className="text-xs font-bold animate-pulse">✨ 已生成長按儲存圖，請長按預覽圖儲存</span>
-            </div>
-          )}
         </div>
       </div>
     </div>
