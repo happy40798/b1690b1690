@@ -158,15 +158,13 @@ const AwardGenerator = () => {
             <p className="text-slate-500 text-[10px] tracking-widest uppercase mb-6">B1690 Premium Edition</p>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">姓名</label>
-                  <input type="text" value={data.name} onChange={e => setData({...data, name: e.target.value})} className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-red-500 outline-none" />
-                </div>
-                <button onClick={syncPhotoFromSheet} disabled={isSyncing} className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors border border-slate-600">
-                  {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} 同步人像
-                </button>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">姓名</label>
+                <input type="text" value={data.name} onChange={e => setData({...data, name: e.target.value})} className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-red-500 outline-none" />
               </div>
+              <button onClick={syncPhotoFromSheet} disabled={isSyncing} className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors border border-slate-600">
+                {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} 同步人像
+              </button>
 
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">成交商品</label>
@@ -225,7 +223,7 @@ const AwardGenerator = () => {
                 {/* 背景底圖 */}
                 <div className="absolute inset-0 z-0 bg-neutral-900">
                   <img src={data.bgImage || DEFAULT_BG_URL} crossOrigin="anonymous" className="w-full h-full object-cover" alt="bg" />
-                  <div className="absolute inset-0 bg-black/20"></div>
+                  <div className="absolute inset-0 bg-black/15"></div>
                 </div>
 
                 {/* 裝飾框 */}
@@ -236,15 +234,15 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-10 h-10 border-b-2 border-r-2 border-white/50"></div>
                 </div>
 
-                {/* 內容區：pt-6 將內容往上抬一點 */}
-                <div className="absolute inset-0 z-20 flex flex-col items-center pt-6 pb-12 px-8 text-center">
+                {/* 內容區：pt-4 再次微調上移 */}
+                <div className="absolute inset-0 z-20 flex flex-col items-center pt-4 pb-12 px-8 text-center">
                   
-                  {/* 頭像區域：重構以修復 Safari 陰影黑邊問題 */}
+                  {/* 人像：移除所有邊框與會導致 Safari 黑邊的 shadow 屬性 */}
                   <div className="relative w-52 h-52 mb-4 shrink-0 flex items-center justify-center">
-                    {/* 分離陰影層 */}
-                    <div className="absolute inset-0 rounded-full shadow-[0_15px_40px_rgba(0,0,0,0.8)] bg-black"></div>
-                    {/* 內容與邊框層 */}
-                    <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-white/30 bg-neutral-800 flex items-center justify-center">
+                    {/* 使用背景徑向漸變模擬陰影，避開 Safari Canvas 的 Shadow 錯誤 */}
+                    <div className="absolute inset-[-10px] rounded-full bg-gradient-to-b from-black/0 to-black/60 blur-xl opacity-80"></div>
+                    
+                    <div className="relative w-full h-full rounded-full overflow-hidden bg-neutral-800 flex items-center justify-center">
                       {data.image ? (
                         <img src={data.image} crossOrigin="anonymous" className="w-full h-full object-cover" alt="avatar" />
                       ) : (
@@ -278,8 +276,8 @@ const AwardGenerator = () => {
                     </div>
                   </div>
 
-                  {/* 頁尾：確保足夠安全間距防止裁切 */}
-                  <div className="mt-auto flex flex-col items-center gap-1.5 opacity-90 shrink-0">
+                  {/* 頁尾：確保底部安全距離 */}
+                  <div className="mt-auto flex flex-col items-center gap-1.5 opacity-95 shrink-0">
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-black tracking-[0.2em] text-white">B1690</span>
                       <span className="text-white/30">|</span>
