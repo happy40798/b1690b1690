@@ -234,10 +234,10 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-10 h-10 border-b-2 border-r-2 border-white/50"></div>
                 </div>
 
-                {/* 內容區：pt-4 再次微調上移 */}
-                <div className="absolute inset-0 z-20 flex flex-col items-center pt-4 pb-12 px-8 text-center">
+                {/* 內容區：調整為 pt-10 以解決區塊太上面的問題 */}
+                <div className="absolute inset-0 z-20 flex flex-col items-center pt-10 pb-12 px-8 text-center">
                   
-                  {/* 人像：移除所有邊框與會導致 Safari 黑邊的 shadow 屬性 */}
+                  {/* 人像：移除所有邊框，保持圓形剪裁 */}
                   <div className="relative w-52 h-52 mb-4 shrink-0 flex items-center justify-center">
                     {/* 使用背景徑向漸變模擬陰影，避開 Safari Canvas 的 Shadow 錯誤 */}
                     <div className="absolute inset-[-10px] rounded-full bg-gradient-to-b from-black/0 to-black/60 blur-xl opacity-80"></div>
