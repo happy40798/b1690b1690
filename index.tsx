@@ -27,34 +27,40 @@ const AwardGenerator = () => {
     bgImage: null as string | null, 
   });
 
-  // 輔助：網路 URL 轉 Base64
-  const getBase64 = async (url: string): Promise<string> => {
+  // 核心修復：更強大的 Base64 轉換器，專門處理 iPhone 下載空白問題
+  const convertUrlToBase64 = async (url: string): Promise<string> => {
     if (!url || url.startsWith('data:')) return url;
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, { mode: 'cors', cache: 'no-cache' });
       const blob = await response.blob();
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
     } catch (e) {
-      return url;
+      console.error("Base64 conversion failed:", e);
+      return url; // 失敗則回傳原網址 (雖然這可能導致下載空白)
     }
   };
 
+  // 自動轉換背景與照片
   useEffect(() => {
-    const convertImages = async () => {
+    const processImages = async () => {
       if (data.image && data.image.startsWith('http')) {
-        const b64 = await getBase64(data.image);
+        const b64 = await convertUrlToBase64(data.image);
         setData(prev => ({ ...prev, image: b64 }));
       }
-      if (data.bgImage && data.bgImage.startsWith('http')) {
-        const b64 = await getBase64(data.bgImage);
+      if (!data.bgImage) {
+        const b64 = await convertUrlToBase64(DEFAULT_BG_URL);
+        setData(prev => ({ ...prev, bgImage: b64 }));
+      } else if (data.bgImage.startsWith('http')) {
+        const b64 = await convertUrlToBase64(data.bgImage);
         setData(prev => ({ ...prev, bgImage: b64 }));
       }
     };
-    convertImages();
+    processImages();
   }, [data.image, data.bgImage]);
 
   useEffect(() => {
@@ -110,31 +116,64 @@ const AwardGenerator = () => {
         const url = target.find(c => c.includes('drive.google.com'));
         if (url) {
           const id = url.includes('/d/') ? url.split('/d/')[1].split('/')[0] : url.split('id=')[1]?.split('&')[0];
-          if (id) setData(prev => ({ ...prev, image: `https://lh3.googleusercontent.com/u/0/d/${id}=w1000` }));
+          if (id) {
+            const photoUrl = `https://lh3.googleusercontent.com/u/0/d/${id}=w1000`;
+            const b64 = await convertUrlToBase64(photoUrl);
+            setData(prev => ({ ...prev, image: b64 }));
+          }
         }
       }
-    } catch (e) { console.error(e); } finally { setIsSyncing(false); }
+    } catch (e) { 
+      console.error(e); 
+      alert("同步失敗，請手動上傳照片");
+    } finally { 
+      setIsSyncing(false); 
+    }
   };
 
   const downloadImage = async () => {
     if (!awardRef.current || isDownloading) return;
     setIsDownloading(true);
+
     try {
-      await new Promise(r => setTimeout(r, 600));
+      // 下載前最後確認：確保照片和底圖都是 Base64 格式
+      let finalImg = data.image;
+      let finalBg = data.bgImage;
+
+      if (data.image && data.image.startsWith('http')) {
+        finalImg = await convertUrlToBase64(data.image);
+      }
+      if (data.bgImage && data.bgImage.startsWith('http')) {
+        finalBg = await convertUrlToBase64(data.bgImage);
+      } else if (!data.bgImage) {
+        finalBg = await convertUrlToBase64(DEFAULT_BG_URL);
+      }
+
+      // 如果有變動則更新狀態並等待渲染
+      if (finalImg !== data.image || finalBg !== data.bgImage) {
+        setData(prev => ({ ...prev, image: finalImg, bgImage: finalBg }));
+        await new Promise(r => setTimeout(r, 800)); // 給予瀏覽器時間渲染新的 Base64
+      } else {
+        await new Promise(r => setTimeout(r, 300));
+      }
+
       const dataUrl = await toPng(awardRef.current, {
         pixelRatio: 2,
         backgroundColor: '#000',
         width: 480,
         height: 600,
+        cacheBust: true, // 強制清除快取
         style: { transform: 'scale(1)', transformOrigin: 'top left' }
       });
+
       setLongPressImage(dataUrl); 
       const link = document.createElement('a');
       link.download = `賀報_${data.name}.png`;
       link.href = dataUrl;
       link.click();
     } catch (e) {
-      console.error(e);
+      console.error("Download error:", e);
+      alert("下載過程發生錯誤，請截圖或重試。");
     } finally {
       setIsDownloading(false);
     }
@@ -200,7 +239,7 @@ const AwardGenerator = () => {
             </div>
             
             <div className="mt-6 pt-6 border-t border-slate-700">
-               <button onClick={downloadImage} disabled={isDownloading} className={`w-full ${isDownloading ? 'bg-slate-600' : 'bg-white hover:bg-slate-100'} text-slate-900 font-black py-4 rounded-xl shadow-xl flex items-center justify-center gap-2 transition-all`}>
+               <button onClick={downloadImage} disabled={isDownloading} className={`w-full ${isDownloading ? 'bg-slate-600 cursor-not-allowed' : 'bg-white hover:bg-slate-100'} text-slate-900 font-black py-4 rounded-xl shadow-xl flex items-center justify-center gap-2 transition-all`}>
                  {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                  {isDownloading ? '生成中...' : '下載高清賀報'}
                </button>
@@ -214,15 +253,15 @@ const AwardGenerator = () => {
             style={{ transform: `scale(${previewScale})`, transformOrigin: 'top center', width: '480px', height: '600px', marginBottom: `${(600 * previewScale) - 600}px` }}
             className="relative overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.5)] bg-black text-white shrink-0"
           >
-            {/* 透明長按層 */}
+            {/* 隱形長按圖層：僅在生成後覆蓋，不干擾視覺 */}
             {longPressImage && (
               <img src={longPressImage} className="absolute inset-0 z-[100] w-full h-full object-contain pointer-events-auto opacity-0" alt="save-me" />
             )}
 
             <div ref={awardRef} className="w-full h-full relative bg-black">
-                {/* 背景底圖 */}
+                {/* 背景底圖：移除 crossOrigin 以適配 Base64 */}
                 <div className="absolute inset-0 z-0 bg-neutral-900">
-                  <img src={data.bgImage || DEFAULT_BG_URL} crossOrigin="anonymous" className="w-full h-full object-cover" alt="bg" />
+                  <img src={data.bgImage || DEFAULT_BG_URL} className="w-full h-full object-cover" alt="bg" />
                   <div className="absolute inset-0 bg-black/15"></div>
                 </div>
 
@@ -234,17 +273,15 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-10 h-10 border-b-2 border-r-2 border-white/50"></div>
                 </div>
 
-                {/* 內容區：調整為 pt-10 以解決區塊太上面的問題 */}
+                {/* 內容區：pt-10 確保向下移一點 */}
                 <div className="absolute inset-0 z-20 flex flex-col items-center pt-10 pb-12 px-8 text-center">
                   
-                  {/* 人像：移除所有邊框，保持圓形剪裁 */}
+                  {/* 人像：移除所有邊框，純圓形剪裁 */}
                   <div className="relative w-52 h-52 mb-4 shrink-0 flex items-center justify-center">
-                    {/* 使用背景徑向漸變模擬陰影，避開 Safari Canvas 的 Shadow 錯誤 */}
-                    <div className="absolute inset-[-10px] rounded-full bg-gradient-to-b from-black/0 to-black/60 blur-xl opacity-80"></div>
-                    
+                    <div className="absolute inset-[-12px] rounded-full bg-gradient-to-b from-black/0 to-black/60 blur-xl opacity-70"></div>
                     <div className="relative w-full h-full rounded-full overflow-hidden bg-neutral-800 flex items-center justify-center">
                       {data.image ? (
-                        <img src={data.image} crossOrigin="anonymous" className="w-full h-full object-cover" alt="avatar" />
+                        <img src={data.image} className="w-full h-full object-cover" alt="avatar" />
                       ) : (
                         <span className="text-[10rem] font-black font-serif-tc text-white/90">賀</span>
                       )}
@@ -276,7 +313,7 @@ const AwardGenerator = () => {
                     </div>
                   </div>
 
-                  {/* 頁尾：確保底部安全距離 */}
+                  {/* 頁尾 */}
                   <div className="mt-auto flex flex-col items-center gap-1.5 opacity-95 shrink-0">
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-black tracking-[0.2em] text-white">B1690</span>
