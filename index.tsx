@@ -41,7 +41,7 @@ const AwardGenerator = () => {
       });
     } catch (e) {
       console.error("Base64 conversion failed:", e);
-      return url; // 失敗則回傳原網址 (雖然這可能導致下載空白)
+      return url; 
     }
   };
 
@@ -136,7 +136,6 @@ const AwardGenerator = () => {
     setIsDownloading(true);
 
     try {
-      // 下載前最後確認：確保照片和底圖都是 Base64 格式
       let finalImg = data.image;
       let finalBg = data.bgImage;
 
@@ -149,10 +148,9 @@ const AwardGenerator = () => {
         finalBg = await convertUrlToBase64(DEFAULT_BG_URL);
       }
 
-      // 如果有變動則更新狀態並等待渲染
       if (finalImg !== data.image || finalBg !== data.bgImage) {
         setData(prev => ({ ...prev, image: finalImg, bgImage: finalBg }));
-        await new Promise(r => setTimeout(r, 800)); // 給予瀏覽器時間渲染新的 Base64
+        await new Promise(r => setTimeout(r, 800)); 
       } else {
         await new Promise(r => setTimeout(r, 300));
       }
@@ -162,7 +160,7 @@ const AwardGenerator = () => {
         backgroundColor: '#000',
         width: 480,
         height: 600,
-        cacheBust: true, // 強制清除快取
+        cacheBust: true,
         style: { transform: 'scale(1)', transformOrigin: 'top left' }
       });
 
@@ -253,16 +251,14 @@ const AwardGenerator = () => {
             style={{ transform: `scale(${previewScale})`, transformOrigin: 'top center', width: '480px', height: '600px', marginBottom: `${(600 * previewScale) - 600}px` }}
             className="relative overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.5)] bg-black text-white shrink-0"
           >
-            {/* 隱形長按圖層：僅在生成後覆蓋，不干擾視覺 */}
             {longPressImage && (
               <img src={longPressImage} className="absolute inset-0 z-[100] w-full h-full object-contain pointer-events-auto opacity-0" alt="save-me" />
             )}
 
             <div ref={awardRef} className="w-full h-full relative bg-black">
-                {/* 背景底圖：移除 crossOrigin 以適配 Base64 */}
-                <div className="absolute inset-0 z-0 bg-neutral-900">
+                {/* 背景底圖：移除黑色遮罩 overlay 以保持明亮 */}
+                <div className="absolute inset-0 z-0 bg-neutral-100">
                   <img src={data.bgImage || DEFAULT_BG_URL} className="w-full h-full object-cover" alt="bg" />
-                  <div className="absolute inset-0 bg-black/15"></div>
                 </div>
 
                 {/* 裝飾框 */}
@@ -273,55 +269,55 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-10 h-10 border-b-2 border-r-2 border-white/50"></div>
                 </div>
 
-                {/* 內容區：pt-10 確保向下移一點 */}
+                {/* 內容區：保持下移 pt-10 */}
                 <div className="absolute inset-0 z-20 flex flex-col items-center pt-10 pb-12 px-8 text-center">
                   
-                  {/* 人像：移除所有邊框，純圓形剪裁 */}
+                  {/* 人像：大幅調淺模擬陰影的透明度，避免黑邊感 */}
                   <div className="relative w-52 h-52 mb-4 shrink-0 flex items-center justify-center">
-                    <div className="absolute inset-[-12px] rounded-full bg-gradient-to-b from-black/0 to-black/60 blur-xl opacity-70"></div>
-                    <div className="relative w-full h-full rounded-full overflow-hidden bg-neutral-800 flex items-center justify-center">
+                    <div className="absolute inset-[-15px] rounded-full bg-gradient-to-b from-black/0 to-black/30 blur-2xl opacity-40"></div>
+                    <div className="relative w-full h-full rounded-full overflow-hidden bg-neutral-200 flex items-center justify-center">
                       {data.image ? (
                         <img src={data.image} className="w-full h-full object-cover" alt="avatar" />
                       ) : (
-                        <span className="text-[10rem] font-black font-serif-tc text-white/90">賀</span>
+                        <span className="text-[10rem] font-black font-serif-tc text-black/20">賀</span>
                       )}
                     </div>
                   </div>
 
-                  {/* 姓名 */}
-                  <h2 className="text-5xl font-black text-white tracking-[0.15em] drop-shadow-[0_4px_10px_rgba(0,0,0,0.9)] font-serif-tc mb-4 shrink-0 leading-tight">
+                  {/* 姓名：增加投影厚度確保明亮背景下依然清晰 */}
+                  <h2 className="text-5xl font-black text-white tracking-[0.15em] drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] font-serif-tc mb-4 shrink-0 leading-tight">
                     {data.name}
                   </h2>
 
-                  {/* 數據看板 */}
-                  <div className="w-full max-w-[320px] border-2 border-white rounded-2xl overflow-hidden bg-black/40 shadow-2xl shrink-0">
-                    <div className="py-2 bg-white/10 border-b border-white/20">
-                      <p className="text-lg font-bold tracking-widest text-white drop-shadow-md">成交 {data.product}</p>
+                  {/* 數據看板：改為超薄透明玻璃質感 bg-black/10 */}
+                  <div className="w-full max-w-[320px] border-2 border-white rounded-2xl overflow-hidden bg-black/10 backdrop-blur-sm shadow-xl shrink-0">
+                    <div className="py-2 bg-white/20 border-b border-white/20">
+                      <p className="text-lg font-bold tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">成交 {data.product}</p>
                     </div>
                     <div className="flex relative">
                       <div className="absolute inset-y-3 left-1/2 w-[1px] bg-white/20"></div>
                       <div className="flex-1 py-3.5">
-                        <p className="text-[9px] font-black text-white/60 uppercase tracking-widest mb-0.5">FYP</p>
-                        <p className={`${getFontSize(data.fyp)} font-black text-white font-mono leading-tight`}>{data.fyp}</p>
+                        <p className="text-[9px] font-black text-white/70 uppercase tracking-widest mb-0.5 drop-shadow-sm">FYP</p>
+                        <p className={`${getFontSize(data.fyp)} font-black text-white font-mono leading-tight drop-shadow-md`}>{data.fyp}</p>
                       </div>
                       <div className="flex-1 py-3.5">
-                        <p className="text-[9px] font-black text-white/60 uppercase tracking-widest mb-0.5 flex items-center justify-center gap-1">
+                        <p className="text-[9px] font-black text-white/70 uppercase tracking-widest mb-0.5 flex items-center justify-center gap-1 drop-shadow-sm">
                           <Gem className="w-2.5 h-2.5" /> FYC
                         </p>
-                        <p className={`${getFontSize(data.fyc)} font-black text-white font-mono leading-tight`}>{data.fyc}</p>
+                        <p className={`${getFontSize(data.fyc)} font-black text-white font-mono leading-tight drop-shadow-md`}>{data.fyc}</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* 頁尾 */}
+                  {/* 頁尾：確保清晰度 */}
                   <div className="mt-auto flex flex-col items-center gap-1.5 opacity-95 shrink-0">
                     <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-black tracking-[0.2em] text-white">B1690</span>
+                      <span className="text-[10px] font-black tracking-[0.2em] text-white drop-shadow-sm">B1690</span>
                       <span className="text-white/30">|</span>
-                      <span className="text-[10px] font-black tracking-[0.3em] text-white">中恩通訊處</span>
+                      <span className="text-[10px] font-black tracking-[0.3em] text-white drop-shadow-sm">中恩通訊處</span>
                     </div>
-                    <div className="flex items-center gap-2 text-white/90 font-mono text-sm tracking-widest">
-                      <Calendar className="w-3.5 h-3.5 opacity-60" />
+                    <div className="flex items-center gap-2 text-white font-mono text-sm tracking-widest drop-shadow-sm">
+                      <Calendar className="w-3.5 h-3.5 opacity-80" />
                       {data.date.replace(/-/g, '.')}
                     </div>
                   </div>
