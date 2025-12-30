@@ -314,8 +314,8 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-10 h-10 border-b-2 border-r-2 border-white/50"></div>
                 </div>
 
-                {/* 內容區：由 pt-16 調整為 pt-10，將整體內容輕微往上移動 */}
-                <div className="absolute inset-0 z-20 flex flex-col items-center pt-10 pb-12 px-8 text-center">
+                {/* 內容區：將 pt-10 調整為 pt-14，將整體內容精確地往下移動一點點 */}
+                <div className="absolute inset-0 z-20 flex flex-col items-center pt-14 pb-8 px-8 text-center">
                   
                   {/* 人像 */}
                   <div className="relative w-52 h-52 mb-4 shrink-0 flex items-center justify-center">
@@ -362,7 +362,7 @@ const AwardGenerator = () => {
                     </div>
                   </div>
 
-                  {/* 頁尾 */}
+                  {/* 頁尾：pb 由 12 縮減為 8，使底部的「中恩通訊處」與日期往下移靠近邊緣 */}
                   <div className="mt-auto flex flex-col items-center gap-1.5 opacity-95 shrink-0">
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-black tracking-[0.2em] text-white drop-shadow-sm">B1690</span>
