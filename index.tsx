@@ -227,11 +227,17 @@ const AwardGenerator = () => {
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <label className="flex flex-col items-center justify-center h-16 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer hover:bg-slate-700/50">
                   <span className="text-[10px] font-bold text-slate-400">更換底圖</span>
-                  <input type="file" className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && compressImage(e.target.files[0], b => setData({...data, bgImage: b}))} />
+                  <input type="file" className="hidden" accept="image/*" onChange={e => {
+                    const files = (e.target as HTMLInputElement).files;
+                    if (files?.[0]) compressImage(files[0], b => setData({...data, bgImage: b}));
+                  }} />
                 </label>
                 <label className="flex flex-col items-center justify-center h-16 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer hover:bg-slate-700/50">
                   <span className="text-[10px] font-bold text-slate-400">手動照片</span>
-                  <input type="file" className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && compressImage(e.target.files[0], b => setData({...data, image: b}))} />
+                  <input type="file" className="hidden" accept="image/*" onChange={e => {
+                    const files = (e.target as HTMLInputElement).files;
+                    if (files?.[0]) compressImage(files[0], b => setData({...data, image: b}));
+                  }} />
                 </label>
               </div>
             </div>
@@ -256,7 +262,7 @@ const AwardGenerator = () => {
             )}
 
             <div ref={awardRef} className="w-full h-full relative bg-black">
-                {/* 背景底圖：移除黑色遮罩 overlay 以保持明亮 */}
+                {/* 背景底圖 */}
                 <div className="absolute inset-0 z-0 bg-neutral-100">
                   <img src={data.bgImage || DEFAULT_BG_URL} className="w-full h-full object-cover" alt="bg" />
                 </div>
@@ -269,10 +275,10 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-10 h-10 border-b-2 border-r-2 border-white/50"></div>
                 </div>
 
-                {/* 內容區：保持下移 pt-10 */}
-                <div className="absolute inset-0 z-20 flex flex-col items-center pt-10 pb-12 px-8 text-center">
+                {/* 內容區：將 pt-16 調整為 pt-24，整體稍微往下移一點點 */}
+                <div className="absolute inset-0 z-20 flex flex-col items-center pt-24 pb-12 px-8 text-center">
                   
-                  {/* 人像：大幅調淺模擬陰影的透明度，避免黑邊感 */}
+                  {/* 人像 */}
                   <div className="relative w-52 h-52 mb-4 shrink-0 flex items-center justify-center">
                     <div className="absolute inset-[-15px] rounded-full bg-gradient-to-b from-black/0 to-black/30 blur-2xl opacity-40"></div>
                     <div className="relative w-full h-full rounded-full overflow-hidden bg-neutral-200 flex items-center justify-center">
@@ -284,12 +290,12 @@ const AwardGenerator = () => {
                     </div>
                   </div>
 
-                  {/* 姓名：增加投影厚度確保明亮背景下依然清晰 */}
+                  {/* 姓名 */}
                   <h2 className="text-5xl font-black text-white tracking-[0.15em] drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] font-serif-tc mb-4 shrink-0 leading-tight">
                     {data.name}
                   </h2>
 
-                  {/* 數據看板：改為超薄透明玻璃質感 bg-black/10 */}
+                  {/* 數據看板 */}
                   <div className="w-full max-w-[320px] border-2 border-white rounded-2xl overflow-hidden bg-black/10 backdrop-blur-sm shadow-xl shrink-0">
                     <div className="py-2 bg-white/20 border-b border-white/20">
                       <p className="text-lg font-bold tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">成交 {data.product}</p>
@@ -309,7 +315,7 @@ const AwardGenerator = () => {
                     </div>
                   </div>
 
-                  {/* 頁尾：確保清晰度 */}
+                  {/* 頁尾 */}
                   <div className="mt-auto flex flex-col items-center gap-1.5 opacity-95 shrink-0">
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-black tracking-[0.2em] text-white drop-shadow-sm">B1690</span>
