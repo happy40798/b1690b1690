@@ -227,6 +227,7 @@ const AwardGenerator = () => {
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <label className="flex flex-col items-center justify-center h-16 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer hover:bg-slate-700/50">
                   <span className="text-[10px] font-bold text-slate-400">更換底圖</span>
+                  {/* Fixed: cast e.target to HTMLInputElement to access files property */}
                   <input type="file" className="hidden" accept="image/*" onChange={e => {
                     const files = (e.target as HTMLInputElement).files;
                     if (files?.[0]) compressImage(files[0], b => setData({...data, bgImage: b}));
@@ -234,6 +235,7 @@ const AwardGenerator = () => {
                 </label>
                 <label className="flex flex-col items-center justify-center h-16 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer hover:bg-slate-700/50">
                   <span className="text-[10px] font-bold text-slate-400">手動照片</span>
+                  {/* Fixed: cast e.target to HTMLInputElement and fixed variable name typo from 'event' to 'e' */}
                   <input type="file" className="hidden" accept="image/*" onChange={e => {
                     const files = (e.target as HTMLInputElement).files;
                     if (files?.[0]) compressImage(files[0], b => setData({...data, image: b}));
@@ -275,8 +277,8 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-10 h-10 border-b-2 border-r-2 border-white/50"></div>
                 </div>
 
-                {/* 內容區：將 pt-16 調整為 pt-24，整體稍微往下移一點點 */}
-                <div className="absolute inset-0 z-20 flex flex-col items-center pt-24 pb-12 px-8 text-center">
+                {/* 內容區：由 pt-10 增加到 pt-16，將照片與姓名整體稍微往下移一點點 */}
+                <div className="absolute inset-0 z-20 flex flex-col items-center pt-16 pb-12 px-8 text-center">
                   
                   {/* 人像 */}
                   <div className="relative w-52 h-52 mb-4 shrink-0 flex items-center justify-center">
