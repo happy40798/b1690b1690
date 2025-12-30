@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { Download, Gem, Calendar, Palette, Image as ImageIcon, X, Layout, Loader2, RefreshCw, Move } from 'lucide-react';
+import { Download, Gem, Calendar, Palette, Image as ImageIcon, X, Layout, Loader2, RefreshCw } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
 // --- Constants & Utilities ---
@@ -25,10 +25,6 @@ const AwardGenerator = () => {
     date: new Date().toISOString().split('T')[0],
     image: null as string | null, 
     bgImage: null as string | null,
-    // 照片位移與縮放參數
-    photoX: 0,
-    photoY: 0,
-    photoScale: 1,
   });
 
   // 核心修復：更強大的 Base64 轉換器，專門處理 iPhone 下載空白問題
@@ -87,7 +83,7 @@ const AwardGenerator = () => {
 
   useEffect(() => {
     setLongPressImage(null);
-  }, [data.name, data.product, data.fyp, data.fyc, data.date, data.image, data.bgImage, data.photoX, data.photoY, data.photoScale]);
+  }, [data.name, data.product, data.fyp, data.fyc, data.date, data.image, data.bgImage]);
 
   const compressImage = (file: File, callback: (dataUrl: string) => void) => {
     const reader = new FileReader();
@@ -123,7 +119,7 @@ const AwardGenerator = () => {
           if (id) {
             const photoUrl = `https://lh3.googleusercontent.com/u/0/d/${id}=w1000`;
             const b64 = await convertUrlToBase64(photoUrl);
-            setData(prev => ({ ...prev, image: b64, photoX: 0, photoY: 0, photoScale: 1 }));
+            setData(prev => ({ ...prev, image: b64 }));
           }
         }
       }
@@ -207,41 +203,6 @@ const AwardGenerator = () => {
                 {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} 同步人像
               </button>
 
-              {/* 照片位置微調區 */}
-              <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 space-y-3">
-                <div className="flex items-center gap-2 text-[10px] font-bold text-red-400 uppercase tracking-widest mb-1">
-                  <Move className="w-3 h-3" /> 照片精確調整
-                </div>
-                
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] text-slate-500 uppercase tracking-tighter">
-                    <span>水平 (X)</span>
-                    <span>{data.photoX}px</span>
-                  </div>
-                  <input type="range" min="-100" max="100" value={data.photoX} onChange={e => setData({...data, photoX: parseInt(e.target.value)})} className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-red-500" />
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] text-slate-500 uppercase tracking-tighter">
-                    <span>垂直 (Y)</span>
-                    <span>{data.photoY}px</span>
-                  </div>
-                  <input type="range" min="-100" max="100" value={data.photoY} onChange={e => setData({...data, photoY: parseInt(e.target.value)})} className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-red-500" />
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] text-slate-500 uppercase tracking-tighter">
-                    <span>縮放 (Scale)</span>
-                    <span>{data.photoScale.toFixed(2)}x</span>
-                  </div>
-                  <input type="range" min="0.5" max="2.5" step="0.05" value={data.photoScale} onChange={e => setData({...data, photoScale: parseFloat(e.target.value)})} className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-red-500" />
-                </div>
-
-                <button onClick={() => setData({...data, photoX: 0, photoY: 0, photoScale: 1})} className="w-full py-1 text-[10px] font-bold text-slate-500 hover:text-white transition-colors">
-                  重置調整
-                </button>
-              </div>
-
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">成交商品</label>
                 <input type="text" value={data.product} onChange={e => setData({...data, product: e.target.value})} className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-red-500 outline-none" />
@@ -275,7 +236,7 @@ const AwardGenerator = () => {
                   <span className="text-[10px] font-bold text-slate-400">手動照片</span>
                   <input type="file" className="hidden" accept="image/*" onChange={e => {
                     const files = (e.target as HTMLInputElement).files;
-                    if (files?.[0]) compressImage(files[0], b => setData({...data, image: b, photoX: 0, photoY: 0, photoScale: 1}));
+                    if (files?.[0]) compressImage(files[0], b => setData({...data, image: b}));
                   }} />
                 </label>
               </div>
@@ -314,7 +275,7 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-10 h-10 border-b-2 border-r-2 border-white/50"></div>
                 </div>
 
-                {/* 內容區：將 pt-10 調整為 pt-14，將整體內容精確地往下移動一點點 */}
+                {/* 內容區：頂部間距 pt-14，整體內容往下移動一點點 */}
                 <div className="absolute inset-0 z-20 flex flex-col items-center pt-14 pb-8 px-8 text-center">
                   
                   {/* 人像 */}
@@ -325,10 +286,6 @@ const AwardGenerator = () => {
                         <img 
                           src={data.image} 
                           className="w-full h-full object-cover" 
-                          style={{ 
-                            transform: `translate(${data.photoX}px, ${data.photoY}px) scale(${data.photoScale})`,
-                            transformOrigin: 'center'
-                          }}
                           alt="avatar" 
                         />
                       ) : (
@@ -362,7 +319,7 @@ const AwardGenerator = () => {
                     </div>
                   </div>
 
-                  {/* 頁尾：pb 由 12 縮減為 8，使底部的「中恩通訊處」與日期往下移靠近邊緣 */}
+                  {/* 頁尾：pb 為 8，使底部的「中恩通訊處」與日期往下移靠近邊緣 */}
                   <div className="mt-auto flex flex-col items-center gap-1.5 opacity-95 shrink-0">
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-black tracking-[0.2em] text-white drop-shadow-sm">B1690</span>
