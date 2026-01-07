@@ -1,10 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { Download, Gem, Calendar, Palette, Image as ImageIcon, X, Layout, Loader2, RefreshCw } from 'lucide-react';
+import { Download, Gem, Calendar, Palette, Image as ImageIcon, X, Layout, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 
-// --- Constants & Utilities ---
+// --- Constants ---
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTU3_CIpMZcKYy8HNwz7roxLlUM4ndzxn8AJvtD38IA-VsNykmY9wzU-fkEotDNyy1F955_toROJAy-/pub?output=csv';
 const DEFAULT_BG_URL = 'https://lh3.googleusercontent.com/u/0/d/1AffsJ-awf6jfdme6nlFp4Y991gIA_rRm=w1600';
 
@@ -12,7 +12,8 @@ const AwardGenerator = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [previewScale, setPreviewScale] = useState(1);
-  const [longPressImage, setLongPressImage] = useState<string | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [resultImageUrl, setResultImageUrl] = useState<string | null>(null);
 
   const awardRef = useRef<HTMLDivElement>(null);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
@@ -24,14 +25,13 @@ const AwardGenerator = () => {
     fyc: '35,000',
     date: new Date().toISOString().split('T')[0],
     image: null as string | null, 
-    bgImage: null as string | null,
+    bgImage: null as string | null, // 初始設為 null，由 useEffect 轉 Base64
   });
 
-  // 核心修復：更強大的 Base64 轉換器，專門處理 iPhone 下載空白問題
-  const convertUrlToBase64 = async (url: string): Promise<string> => {
-    if (!url || url.startsWith('data:')) return url;
+  // 強制轉換網址圖片為 Base64 以防止 Safari Canvas Tainted 錯誤
+  const convertToBase64 = async (url: string): Promise<string> => {
     try {
-      const response = await fetch(url, { mode: 'cors', cache: 'no-cache' });
+      const response = await fetch(url, { mode: 'cors' });
       const blob = await response.blob();
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -40,29 +40,21 @@ const AwardGenerator = () => {
         reader.readAsDataURL(blob);
       });
     } catch (e) {
-      console.error("Base64 conversion failed:", e);
-      return url; 
+      console.error("Base64 conversion error:", e);
+      return url; // 失敗則回傳原網址
     }
   };
 
-  // 自動轉換背景與照片
+  // 初始化載入底圖的 Base64
   useEffect(() => {
-    const processImages = async () => {
-      if (data.image && data.image.startsWith('http')) {
-        const b64 = await convertUrlToBase64(data.image);
-        setData(prev => ({ ...prev, image: b64 }));
-      }
-      if (!data.bgImage) {
-        const b64 = await convertUrlToBase64(DEFAULT_BG_URL);
-        setData(prev => ({ ...prev, bgImage: b64 }));
-      } else if (data.bgImage.startsWith('http')) {
-        const b64 = await convertUrlToBase64(data.bgImage);
-        setData(prev => ({ ...prev, bgImage: b64 }));
-      }
+    const initBg = async () => {
+      const b64 = await convertToBase64(DEFAULT_BG_URL);
+      setData(prev => ({ ...prev, bgImage: b64 }));
     };
-    processImages();
-  }, [data.image, data.bgImage]);
+    initBg();
+  }, []);
 
+  // 響應式預覽縮放
   useEffect(() => {
     const handleResize = () => {
       if (previewWrapperRef.current) {
@@ -76,15 +68,6 @@ const AwardGenerator = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    const bg = localStorage.getItem('b1690_custom_bg');
-    if (bg) setData(prev => ({ ...prev, bgImage: bg }));
-  }, []);
-
-  useEffect(() => {
-    setLongPressImage(null);
-  }, [data.name, data.product, data.fyp, data.fyc, data.date, data.image, data.bgImage]);
-
   const compressImage = (file: File, callback: (dataUrl: string) => void) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -93,14 +76,14 @@ const AwardGenerator = () => {
       img.src = event.target?.result as string;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1000; 
+        const MAX_WIDTH = 800;
         const scale = MAX_WIDTH / img.width;
-        if (scale >= 1) { callback(event.target?.result as string); return; }
-        canvas.width = MAX_WIDTH;
-        canvas.height = img.height * scale;
+        const targetScale = scale >= 1 ? 1 : scale;
+        canvas.width = img.width * targetScale;
+        canvas.height = img.height * targetScale;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-        callback(canvas.toDataURL('image/jpeg', 0.8));
+        callback(canvas.toDataURL('image/jpeg', 0.85));
       };
     };
   };
@@ -110,22 +93,28 @@ const AwardGenerator = () => {
     setIsSyncing(true);
     try {
       const res = await fetch(SHEET_CSV_URL);
-      const rows = (await res.text()).split('\n').map(r => r.split(',').map(c => c.trim().replace(/"/g, '')));
+      const csvData = await res.text();
+      const rows = csvData.split('\n').map(r => r.split(',').map(c => c.trim().replace(/"/g, '')));
       const target = rows.find(r => r.some(c => c === data.name));
+      
       if (target) {
         const url = target.find(c => c.includes('drive.google.com'));
         if (url) {
           const id = url.includes('/d/') ? url.split('/d/')[1].split('/')[0] : url.split('id=')[1]?.split('&')[0];
           if (id) {
             const photoUrl = `https://lh3.googleusercontent.com/u/0/d/${id}=w1000`;
-            const b64 = await convertUrlToBase64(photoUrl);
+            const b64 = await convertToBase64(photoUrl);
             setData(prev => ({ ...prev, image: b64 }));
           }
+        } else {
+          alert('找到姓名但未偵測到照片連結');
         }
+      } else {
+        alert('找不到此姓名，請確認輸入是否正確');
       }
     } catch (e) { 
       console.error(e); 
-      alert("同步失敗，請手動上傳照片");
+      alert("同步失敗，請確認網路或嘗試手動上傳");
     } finally { 
       setIsSyncing(false); 
     }
@@ -134,44 +123,33 @@ const AwardGenerator = () => {
   const downloadImage = async () => {
     if (!awardRef.current || isDownloading) return;
     setIsDownloading(true);
+    
+    // 給予 UI 一點反應時間
+    await new Promise(r => setTimeout(r, 100));
 
     try {
-      let finalImg = data.image;
-      let finalBg = data.bgImage;
-
-      if (data.image && data.image.startsWith('http')) {
-        finalImg = await convertUrlToBase64(data.image);
-      }
-      if (data.bgImage && data.bgImage.startsWith('http')) {
-        finalBg = await convertUrlToBase64(data.bgImage);
-      } else if (!data.bgImage) {
-        finalBg = await convertUrlToBase64(DEFAULT_BG_URL);
-      }
-
-      if (finalImg !== data.image || finalBg !== data.bgImage) {
-        setData(prev => ({ ...prev, image: finalImg, bgImage: finalBg }));
-        await new Promise(r => setTimeout(r, 800)); 
-      } else {
-        await new Promise(r => setTimeout(r, 300));
-      }
-
       const dataUrl = await toPng(awardRef.current, {
         pixelRatio: 2,
         backgroundColor: '#000',
         width: 480,
         height: 600,
         cacheBust: true,
-        style: { transform: 'scale(1)', transformOrigin: 'top left' }
+        // 確保字體加載
+        skipFonts: false,
       });
+      
+      setResultImageUrl(dataUrl);
+      setShowResultModal(true);
 
-      setLongPressImage(dataUrl); 
+      // 同時嘗試傳統下載（PC端有效）
       const link = document.createElement('a');
       link.download = `賀報_${data.name}.png`;
       link.href = dataUrl;
       link.click();
+      
     } catch (e) {
-      console.error("Download error:", e);
-      alert("下載過程發生錯誤，請截圖或重試。");
+      console.error(e);
+      alert("產生失敗，請確認圖片載入正確或嘗試截圖。");
     } finally {
       setIsDownloading(false);
     }
@@ -184,11 +162,45 @@ const AwardGenerator = () => {
 
   return (
     <div className="min-h-screen p-4 md:p-8 font-sans text-slate-200 bg-slate-900">
+      {/* 下載結果彈窗 - 解決 iPhone 下載問題 */}
+      {showResultModal && resultImageUrl && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 bg-slate-950/95 backdrop-blur-md">
+          <button 
+            onClick={() => setShowResultModal(false)}
+            className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+          >
+            <X className="w-8 h-8" />
+          </button>
+          
+          <div className="text-center mb-6">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <CheckCircle2 className="w-6 h-6 text-green-500" />
+              <h3 className="text-xl font-bold text-white">賀報生成成功！</h3>
+            </div>
+            <p className="text-slate-400 text-sm">iPhone 用戶請「長按下方圖片」選擇「儲存至照片」</p>
+          </div>
+
+          <div className="relative group max-w-full max-h-[70vh] shadow-2xl rounded-lg overflow-hidden border border-white/20">
+            <img 
+              src={resultImageUrl} 
+              className="max-w-full max-h-[70vh] object-contain cursor-pointer"
+              alt="Generated Result"
+            />
+          </div>
+
+          <button 
+            onClick={() => setShowResultModal(false)}
+            className="mt-8 px-10 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-full font-bold transition-all"
+          >
+            返回編輯
+          </button>
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8">
-        
         {/* 控制面板 */}
         <div className="md:col-span-4 space-y-5 order-2 md:order-1">
-          <div className="bg-slate-800/80 backdrop-blur border border-slate-700 rounded-xl p-6 shadow-2xl">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-2xl">
             <h1 className="text-xl font-bold text-white flex items-center gap-2 mb-1">
               <Palette className="w-6 h-6 text-red-500" /> 中恩賀報 Pro
             </h1>
@@ -197,10 +209,11 @@ const AwardGenerator = () => {
             <div className="space-y-4">
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">姓名</label>
-                <input type="text" value={data.name} onChange={e => setData({...data, name: e.target.value})} className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-red-500 outline-none" />
+                <input type="text" value={data.name} onChange={e => setData({...data, name: e.target.value})} className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-red-500 outline-none transition-all" />
               </div>
-              <button onClick={syncPhotoFromSheet} disabled={isSyncing} className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors border border-slate-600">
-                {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} 同步人像
+              
+              <button onClick={syncPhotoFromSheet} disabled={isSyncing} className="w-full bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors border border-slate-600">
+                {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} 同步人像 (Sheet)
               </button>
 
               <div>
@@ -225,15 +238,15 @@ const AwardGenerator = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-2">
-                <label className="flex flex-col items-center justify-center h-16 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer hover:bg-slate-700/50">
-                  <span className="text-[10px] font-bold text-slate-400">更換底圖</span>
+                <label className="flex flex-col items-center justify-center h-16 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
+                  <span className="text-[10px] font-bold text-slate-400 text-center">更換底圖</span>
                   <input type="file" className="hidden" accept="image/*" onChange={e => {
                     const files = (e.target as HTMLInputElement).files;
                     if (files?.[0]) compressImage(files[0], b => setData({...data, bgImage: b}));
                   }} />
                 </label>
-                <label className="flex flex-col items-center justify-center h-16 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer hover:bg-slate-700/50">
-                  <span className="text-[10px] font-bold text-slate-400">手動照片</span>
+                <label className="flex flex-col items-center justify-center h-16 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
+                  <span className="text-[10px] font-bold text-slate-400 text-center">手動人像</span>
                   <input type="file" className="hidden" accept="image/*" onChange={e => {
                     const files = (e.target as HTMLInputElement).files;
                     if (files?.[0]) compressImage(files[0], b => setData({...data, image: b}));
@@ -243,10 +256,11 @@ const AwardGenerator = () => {
             </div>
             
             <div className="mt-6 pt-6 border-t border-slate-700">
-               <button onClick={downloadImage} disabled={isDownloading} className={`w-full ${isDownloading ? 'bg-slate-600 cursor-not-allowed' : 'bg-white hover:bg-slate-100'} text-slate-900 font-black py-4 rounded-xl shadow-xl flex items-center justify-center gap-2 transition-all`}>
+               <button onClick={downloadImage} disabled={isDownloading || !data.bgImage} className={`w-full ${isDownloading ? 'bg-slate-600 cursor-not-allowed' : 'bg-white hover:bg-slate-100'} text-slate-900 font-black py-4 rounded-xl shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95`}>
                  {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-                 {isDownloading ? '生成中...' : '下載高清賀報'}
+                 {isDownloading ? '正在生成圖片...' : '下載高清賀報'}
                </button>
+               <p className="text-[9px] text-slate-500 mt-3 text-center uppercase tracking-widest">Optimized for iOS & Safari</p>
             </div>
           </div>
         </div>
@@ -254,17 +268,21 @@ const AwardGenerator = () => {
         {/* 預覽區 */}
         <div ref={previewWrapperRef} className="md:col-span-8 flex flex-col items-center justify-start min-h-[650px] order-1 md:order-2">
           <div 
-            style={{ transform: `scale(${previewScale})`, transformOrigin: 'top center', width: '480px', height: '600px', marginBottom: `${(600 * previewScale) - 600}px` }}
-            className="relative overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.5)] bg-black text-white shrink-0"
+            style={{ 
+              transform: `scale(${previewScale})`, 
+              transformOrigin: 'top center', 
+              width: '480px', 
+              height: '600px', 
+              marginBottom: `${(600 * previewScale) - 600}px` 
+            }}
+            className="relative overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.5)] bg-black shrink-0"
           >
-            {longPressImage && (
-              <img src={longPressImage} className="absolute inset-0 z-[100] w-full h-full object-contain pointer-events-auto opacity-0" alt="save-me" />
-            )}
-
             <div ref={awardRef} className="w-full h-full relative bg-black">
-                {/* 背景底圖 */}
+                {/* 背景底圖 - 必須使用 Base64 否則 Safari 會報 tainted canvas */}
                 <div className="absolute inset-0 z-0 bg-neutral-100">
-                  <img src={data.bgImage || DEFAULT_BG_URL} className="w-full h-full object-cover" alt="bg" />
+                  {data.bgImage && (
+                    <img src={data.bgImage} className="w-full h-full object-cover" alt="bg" />
+                  )}
                 </div>
 
                 {/* 裝飾框 */}
@@ -275,21 +293,17 @@ const AwardGenerator = () => {
                   <div className="absolute bottom-0 right-0 w-10 h-10 border-b-2 border-r-2 border-white/50"></div>
                 </div>
 
-                {/* 內容區：頂部間距 pt-14，整體內容往下移動一點點 */}
+                {/* 內容區 */}
                 <div className="absolute inset-0 z-20 flex flex-col items-center pt-14 pb-8 px-8 text-center">
                   
                   {/* 人像 */}
-                  <div className="relative w-52 h-52 mb-4 shrink-0 flex items-center justify-center">
+                  <div className="relative w-52 h-52 mb-4 shrink-0">
                     <div className="absolute inset-[-15px] rounded-full bg-gradient-to-b from-black/0 to-black/30 blur-2xl opacity-40"></div>
-                    <div className="relative w-full h-full rounded-full overflow-hidden bg-neutral-200 flex items-center justify-center">
+                    <div className="relative w-full h-full rounded-full overflow-hidden bg-neutral-200 flex items-center justify-center border-4 border-white/10 shadow-2xl">
                       {data.image ? (
-                        <img 
-                          src={data.image} 
-                          className="w-full h-full object-cover" 
-                          alt="avatar" 
-                        />
+                        <img src={data.image} className="w-full h-full object-cover" alt="avatar" />
                       ) : (
-                        <span className="text-[10rem] font-black font-serif-tc text-black/20">賀</span>
+                        <span className="text-[10rem] font-black font-serif-tc text-black/10">賀</span>
                       )}
                     </div>
                   </div>
@@ -319,7 +333,7 @@ const AwardGenerator = () => {
                     </div>
                   </div>
 
-                  {/* 頁尾：pb 為 8，使底部的「中恩通訊處」與日期往下移靠近邊緣 */}
+                  {/* 頁尾 */}
                   <div className="mt-auto flex flex-col items-center gap-1.5 opacity-95 shrink-0">
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-black tracking-[0.2em] text-white drop-shadow-sm">B1690</span>
@@ -334,6 +348,7 @@ const AwardGenerator = () => {
                 </div>
             </div>
           </div>
+          <p className="text-slate-500 text-xs mt-4">預覽畫面僅供參考，下載圖檔為高清原尺寸</p>
         </div>
       </div>
     </div>
