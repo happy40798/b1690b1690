@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { Download, Gem, Calendar, Palette, Loader2, RefreshCw, X, CheckCircle2, Share } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import defaultBg from './bg.png';
+import defaultBg from './bg.jpg';
 
 // --- Constants ---
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTU3_CIpMZcKYy8HNwz7roxLlUM4ndzxn8AJvtD38IA-VsNykmY9wzU-fkEotDNyy1F955_toROJAy-/pub?output=csv';
