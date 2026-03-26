@@ -1,13 +1,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { Download, Gem, Calendar, Palette, Loader2, RefreshCw, X, CheckCircle2, Share } from 'lucide-react';
+import { Download, Gem, Calendar, Palette, Image as ImageIcon, Loader2, RefreshCw, X, CheckCircle2, Share } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import defaultBg from './bg.jpg';
 
 // --- Constants ---
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTU3_CIpMZcKYy8HNwz7roxLlUM4ndzxn8AJvtD38IA-VsNykmY9wzU-fkEotDNyy1F955_toROJAy-/pub?output=csv';
-const DEFAULT_BG_URL = defaultBg;
+const DEFAULT_BG_URL = 'https://lh3.googleusercontent.com/u/0/d/1AffsJ-awf6jfdme6nlFp4Y991gIA_rRm=w1600';
 
 const AwardGenerator = () => {
   const [isDownloading, setIsDownloading] = useState(false);
@@ -76,14 +75,13 @@ const AwardGenerator = () => {
       img.src = e.target?.result as string;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX = target === 'bgImage' ? 1000 : 800;
+        const MAX = target === 'bgImage' ? 1600 : 800;
         const scale = Math.min(1, MAX / Math.max(img.width, img.height));
         canvas.width = img.width * scale;
         canvas.height = img.height * scale;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const quality = target === 'bgImage' ? 0.7 : 0.85;
-        setData(prev => ({ ...prev, [target]: canvas.toDataURL('image/jpeg', quality) }));
+        setData(prev => ({ ...prev, [target]: canvas.toDataURL('image/jpeg', 0.85) }));
       };
     };
     reader.readAsDataURL(file);
@@ -359,15 +357,8 @@ const AwardGenerator = () => {
                 </div>
 
                 {/* 內容疊層 */}
-                <div className="absolute inset-0 z-20 flex flex-col items-center pt-8 pb-5 px-8 text-center">
+                <div className="absolute inset-0 z-20 flex flex-col items-center pt-14 pb-8 px-8 text-center">
                   
-                  {/* 頂部單位資訊 */}
-                  <div className="flex items-center gap-4 mb-4">
-                    <span className="text-xs font-black tracking-[0.2em] text-blue-500">B1690</span>
-                    <span className="text-blue-500/50 text-xs">|</span>
-                    <span className="text-xs font-black tracking-[0.2em] text-blue-500">中恩通訊處</span>
-                  </div>
-
                   {/* 人像圓框 */}
                   <div className="relative w-56 h-56 mb-5 shrink-0">
                     <div className="relative w-full h-full rounded-full overflow-hidden bg-white/10 backdrop-blur-md flex items-center justify-center border-[6px] border-white/20 shadow-2xl">
@@ -380,32 +371,37 @@ const AwardGenerator = () => {
                   </div>
 
                   {/* 姓名大字 */}
-                  <h2 className="text-[54px] font-black text-[#F45C59] tracking-[0.15em] drop-shadow-[0_4px_12px_rgba(251,191,36,0.8)] mb-4 shrink-0 leading-tight">
+                  <h2 className="text-[54px] font-black text-white tracking-[0.15em] drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] font-serif-tc mb-4 shrink-0 leading-tight">
                     {data.name}
                   </h2>
 
                   {/* 數據看板 */}
                   <div className="w-full max-w-[340px] border border-white/90 rounded-2xl overflow-hidden bg-black/10 backdrop-blur-md shadow-2xl shrink-0">
                     <div className="py-2.5 bg-white/20 border-b border-white/10">
-                      <p className="text-3xl font-black tracking-widest text-[#F197A4] drop-shadow-sm">成交 {data.product}</p>
+                      <p className="text-xl font-bold tracking-widest text-white drop-shadow-md">成交 {data.product}</p>
                     </div>
                     <div className="flex relative">
                       <div className="absolute inset-y-4 left-1/2 w-[1px] bg-white/20"></div>
                       <div className="flex-1 py-4">
-                        <p className="text-xs font-black text-white uppercase tracking-widest mb-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">FYP</p>
-                        <p className={`${getFontSize(data.fyp)} font-black text-[#fbbf24] font-mono leading-none drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}>{data.fyp}</p>
+                        <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1 drop-shadow-sm">FYP</p>
+                        <p className={`${getFontSize(data.fyp)} font-black text-white font-mono leading-none drop-shadow-lg`}>{data.fyp}</p>
                       </div>
                       <div className="flex-1 py-4">
-                        <p className="text-xs font-black text-white uppercase tracking-widest mb-1 flex items-center justify-center gap-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                          <Gem className="w-3 h-3" /> FYC
+                        <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1 flex items-center justify-center gap-1 drop-shadow-sm">
+                          <Gem className="w-2.5 h-2.5" /> FYC
                         </p>
-                        <p className={`${getFontSize(data.fyc)} font-black text-[#fbbf24] font-mono leading-none drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]`}>{data.fyc}</p>
+                        <p className={`${getFontSize(data.fyc)} font-black text-white font-mono leading-none drop-shadow-lg`}>{data.fyc}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* 頁尾資訊 */}
                   <div className="mt-auto flex flex-col items-center gap-2 opacity-95 shrink-0">
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs font-black tracking-[0.2em] text-white/90">B1690</span>
+                      <span className="text-white/30 text-xs">|</span>
+                      <span className="text-xs font-black tracking-[0.2em] text-white/90">中恩通訊處</span>
+                    </div>
                     <div className="flex items-center gap-2 text-white/90 font-mono text-sm tracking-widest bg-black/20 px-4 py-1 rounded-full border border-white/5">
                       <Calendar className="w-3.5 h-3.5 opacity-80" />
                       {data.date.replace(/-/g, '.')}
