@@ -362,9 +362,9 @@ const AwardGenerator = () => {
                   
                   {/* 頂部單位資訊 */}
                   <div className="flex items-center gap-4 mb-4">
-                    <span className="text-xs font-black tracking-[0.2em] text-blue-500">B1690</span>
-                    <span className="text-blue-500/50 text-xs">|</span>
-                    <span className="text-xs font-black tracking-[0.2em] text-blue-500">中恩通訊處</span>
+                    <span className="text-xs font-black tracking-[0.2em] text-[#ca8a04]">B1690</span>
+                    <span className="text-[#ca8a04]/50 text-xs">|</span>
+                    <span className="text-xs font-black tracking-[0.2em] text-[#ca8a04]">中恩通訊處</span>
                   </div>
 
                   {/* 人像圓框 */}
@@ -386,7 +386,7 @@ const AwardGenerator = () => {
                   {/* 數據看板 */}
                   <div className="w-full max-w-[340px] border border-white/90 rounded-2xl overflow-hidden bg-black/10 backdrop-blur-md shadow-2xl shrink-0">
                     <div className="py-2.5 bg-white/20 border-b border-white/10">
-                      <p className="text-3xl font-black tracking-widest text-[#F197A4] drop-shadow-sm">成交 {data.product}</p>
+                      <p className="text-3xl font-black tracking-widest text-[#ca8a04] drop-shadow-sm">成交 {data.product}</p>
                     </div>
                     <div className="flex relative">
                       <div className="absolute inset-y-4 left-1/2 w-[1px] bg-white/20"></div>
